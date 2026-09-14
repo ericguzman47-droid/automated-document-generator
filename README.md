@@ -36,9 +36,9 @@ The orchestration plane relies on two highly optimized tables. The configuration
 Defines the sequential operational payload, environment paths, and execution flags for active jobs.
 
 Column Name,Data Type,Nullability,Description
-TaskID,INT (PK),NOT NULL,Unique system identifier for the automation workflow.
-TaskName,VARCHAR(100),NOT NULL,Human-readable alias for operational reporting.
-IsEnabled,INT,NOT NULL,"Status flag (1 = Active, 0 = Paused/Soft-Killed)."
+TaskID, INT (PK), NOT NULL, Unique -system identifier for the automation workflow.
+TaskName, VARCHAR(100), NOT NULL,Human-readable alias for operational reporting.
+IsEnabled, INT,N OT NULL, -"Status flag (1 = Active, 0 = Paused/Soft-Killed)."
 PostExecutionSQL,VARCHAR(MAX),NULL,"Dynamic staging, data cleanup, or state-update SQL script."
 PostExecutionBatch,VARCHAR(MAX),NULL,"Absolute file path to an external executable, script, or .bat file."
 
