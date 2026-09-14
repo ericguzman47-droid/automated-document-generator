@@ -13,64 +13,22 @@ In many enterprise environments, batch processing and scheduled automation tasks
 ### The Solution
 This engine decouples system configuration from the execution logic by shifting the operational control plane entirely to a relational database ledger. By evaluating job states dynamically at runtime, the engine reads metadata-driven instructions, chains sequential task workflows, wraps individual operations in isolated fault boundaries, and surfaces full execution telemetry.
 
----
-
 ## 🏗️ System Architecture & Workflow Pipeline
 
 The engine is built around a centralized loop designed for strict sequential task dependencies. If an individual downstream operation fails (e.g., a post-process SQL constraint violation or a missing external batch file), the exception is intercepted, packaged with a full stack trace, and committed to a central telemetry ledger without dropping host execution threads.
 
-    [Windows Task Scheduler / Cron] -->|Instantiates Thread| B(C# Orchestration Engine)
-  |1. Polls Active Tasks| C[(Database: SystemWorkflows)]
-  |2. Validates Soft Kill-Switches| D{Task Enabled?}
-        |No| E[Log Skip Event & Exit]
-        |Yes| F[Execute Core Data Views]
-  |3. Handoff Dataset| G[Primary Process Engine]
-  |4. Sequential Step A| H[Execute Post-Process SQL]
-  |5. Sequential Step B| I[Execute External Script Dependencies]
-  |6. Intercept Failures| J[Collate Execution Metrics]
-  |7. Guaranteed Transaction| K[(Database: SystemExecutionLogs)]
-
-
-*****Relational Database Design
-The orchestration plane relies on two highly optimized tables. The configuration table defines the intent, while the telemetry table logs the historical reality.
-
-1. Workflow Configurations (WorkflowRegistry)
-Defines the sequential operational payload, environment paths, and execution flags for active jobs.
-
-Column Name,         Data Type,     Nullability,   Description
-TaskID,              INT (PK),      NOT NULL,      Unique system identifier for the automation workflow.
-TaskName,            VARCHAR(100),  NOT NULL,      Human-readable alias for operational reporting.
-IsEnabled,           INT,           NOT NULL,      "Status flag (1 = Active, 0 = Paused/Soft-Killed)."
-PostExecutionSQL,    VARCHAR(MAX),  NULL,          "Dynamic staging, data cleanup, or state-update SQL script."
-PostExecutionBatch,  VARCHAR(MAX),  NULL,           "Absolute file path to an external executable, script, or .bat file."
-
-2. Telemetry Logs (SystemExecutionLogs)
-Maintains an immutable historical record of system throughput, operational states, and diagnostics.
-
-Column Name,        Data Type,             Nullability,      Description
-LogID,             "INT (PK, IDENTITY)",    NOT NULL,         Auto-incrementing identifier handled natively by SQL Server.
-TaskID,             INT (FK),               NOT NULL,         Foreign key mapping back to the WorkflowRegistry.
-TaskName,           VARCHAR(100),           NOT NULL,         Snapshot of the job name at the exact point of execution.
-StartTime,          DATETIME,               NOT NULL,         Exact timestamp when the host engine initialized the task.
-EndTime,            DATETIME,               NOT NULL,         Timestamp when the task completed or critically faulted.
-RecordsProcessed,   INT,                    NULL,             Quantitative evaluation of the dataset size pulled at runtime.
-ExecutionStatus,    VARCHAR(50),            NOT NULL,        "Finite states representing completion output (Success, Failed)."
-ExceptionDump,      VARCHAR(MAX),           NULL,            "The raw, unedited ex.ToString() stack trace captured during a crash."
-
-****Core Implementation Snippets
-1. The Core Orchestration Pipeline (WorkflowRunner.cs)
-This class represents the execution heart of the machine. It demonstrates standard defensive programming paradigms, isolated exception handling, and a guaranteed finally block designed to protect telemetry ingestion.
-using System;
-using System.Data;
-using System.IO;
-
-namespace EnterpriseAutomation.Services
-{
-    public class WorkflowRunner
-    {
-        private readonly IDataRepository _dataRepository;
-        private readonly ICoreProcessor _coreProcessor;
-
+graph TD
+    A[Windows Task Scheduler / Cron] -->|Instantiates Thread| B(C# Orchestration Engine)
+    B -->|1. Polls Active Tasks| C[(Database: SystemWorkflows)]
+    B -->|2. Validates Soft Kill-Switches| D{Task Enabled?}
+    D -->|No| E[Log Skip Event & Exit]
+    D -->|Yes| F[Execute Core Data Views]
+    F -->|3. Handoff Dataset| G[Primary Process Engine]
+    G -->|4. Sequential Step A| H[Execute Post-Process SQL]
+    H -->|5. Sequential Step B| I[Execute External Script Dependencies]
+    I -->|6. Intercept Failures| J[Collate Execution Metrics]
+    J -->|7. Guaranteed Transaction| K[(Database: SystemExecutionLogs)]
+    
         public WorkflowRunner(IDataRepository dataRepository, ICoreProcessor coreProcessor)
         {
             _dataRepository = dataRepository;
