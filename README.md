@@ -41,10 +41,10 @@ TaskName,VARCHAR(100),NOT NULL,Human-readable alias for operational reporting.
 IsEnabled,INT,NOT NULL,"Status flag (1 = Active, 0 = Paused/Soft-Killed)."
 PostExecutionSQL,VARCHAR(MAX),NULL,"Dynamic staging, data cleanup, or state-update SQL script."
 PostExecutionBatch,VARCHAR(MAX),NULL,"Absolute file path to an external executable, script, or .bat file."
-graph TD
 
 2. Telemetry Logs (SystemExecutionLogs)
 Maintains an immutable historical record of system throughput, operational states, and diagnostics.
+
 Column Name,Data Type,Nullability,Description
 LogID,"INT (PK, IDENTITY)",NOT NULL,Auto-incrementing identifier handled natively by SQL Server.
 TaskID,INT (FK),NOT NULL,Foreign key mapping back to the WorkflowRegistry.
@@ -55,6 +55,10 @@ RecordsProcessed,INT,NULL,Quantitative evaluation of the dataset size pulled at 
 ExecutionStatus,VARCHAR(50),NOT NULL,"Finite states representing completion output (Success, Failed)."
 ExceptionDump,VARCHAR(MAX),NULL,"The raw, unedited ex.ToString() stack trace captured during a crash."
 
+
+Core Implementation Snippets
+1. The Core Orchestration Pipeline (WorkflowRunner.cs)
+This class represents the execution heart of the machine. It demonstrates standard defensive programming paradigms, isolated exception handling, and a guaranteed finally block designed to protect telemetry ingestion.
         public WorkflowRunner(IDataRepository dataRepository, ICoreProcessor coreProcessor)
         {
             _dataRepository = dataRepository;
